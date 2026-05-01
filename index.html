@@ -1,195 +1,55 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Finance Pro</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-:root{
-  --bg: linear-gradient(135deg,#0f172a,#1e293b);
-  --card: rgba(255,255,255,0.08);
-  --text:#e5e7eb;
-  --green:#22c55e;
-  --red:#ef4444;
-}
-
-body{
-  margin:0;
-  font-family:sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
-
-.container{
-  max-width:520px;
-  margin:auto;
-  padding:15px;
-}
-
-.card{
-  background:var(--card);
-  backdrop-filter:blur(10px);
-  border-radius:18px;
-  padding:14px;
-  margin-bottom:12px;
-}
-
-input,select,button{
-  width:100%;
-  padding:10px;
-  margin:5px 0;
-  border-radius:10px;
-  border:none;
-}
-
-input,select{
-  background:white;
-}
-
-button{
-  background:#2563eb;
-  color:white;
-}
-
-.error{
-  color:#ef4444;
-  font-size:12px;
-}
-
-.item{
-  background:white;
-  color:black;
-  padding:10px;
-  border-radius:10px;
-  margin-top:5px;
-  display:flex;
-  justify-content:space-between;
-}
-
-.green{color:var(--green)}
-.red{color:var(--red)}
-
-.balance{
-  text-align:center;
-  font-size:20px;
-}
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<h2>🏦 Finance Pro</h2>
-
-<div class="card">
-
-<input id="name" placeholder="รายการ">
-<div id="errName" class="error"></div>
-
-<input id="amount" type="number" placeholder="จำนวนเงิน">
-<div id="errAmount" class="error"></div>
-
-<select id="type">
-<option value="income">รายรับ</option>
-<option value="expense">รายจ่าย</option>
-</select>
-
-<input id="date" type="date">
-<div id="errDate" class="error"></div>
-
-<select id="category">
-<option>อาหาร</option>
-<option>เดินทาง</option>
-<option>เงินเดือน</option>
-<option>อื่นๆ</option>
-</select>
-
-<button onclick="add()">เพิ่ม</button>
-
-</div>
-
-<div class="card">
-<input type="month" id="monthFilter" onchange="render()">
-<select id="catFilter" onchange="render()">
-<option value="">ทุกหมวด</option>
-<option>อาหาร</option>
-<option>เดินทาง</option>
-<option>เงินเดือน</option>
-<option>อื่นๆ</option>
-</select>
-</div>
-
-<div class="card balance">
-💰 เหลือ: <span id="balance">0</span>
-</div>
-
-<div class="card" id="list"></div>
-
-<div class="card"><canvas id="barChart"></canvas></div>
-<div class="card"><canvas id="pieChart"></canvas></div>
-<div class="card"><canvas id="profitChart"></canvas></div>
-
-</div>
-
 <script>
 let data = JSON.parse(localStorage.getItem("expenses")) || [];
+
+// ✅ bind DOM ชัดเจน
+const nameInput = document.getElementById("name");
+const amountInput = document.getElementById("amount");
+const typeInput = document.getElementById("type");
+const dateInput = document.getElementById("date");
+const categoryInput = document.getElementById("category");
+
+const list = document.getElementById("list");
+const balance = document.getElementById("balance");
+
+const monthFilter = document.getElementById("monthFilter");
+const catFilter = document.getElementById("catFilter");
+
+const barCanvas = document.getElementById("barChart");
+const pieCanvas = document.getElementById("pieChart");
+const profitCanvas = document.getElementById("profitChart");
+
+// charts
 let barChart, pieChart, profitChart;
 
 // auto date
-date.value = new Date().toISOString().split("T")[0];
+dateInput.value = new Date().toISOString().split("T")[0];
 
 function save(){
-  localStorage.setItem("expenses",JSON.stringify(data));
-}
-
-function clearErrors(){
-  errName.innerText="";
-  errAmount.innerText="";
-  errDate.innerText="";
+  localStorage.setItem("expenses", JSON.stringify(data));
 }
 
 function add(){
-  clearErrors();
+  const nameVal = nameInput.value.trim();
+  const amountVal = parseFloat(amountInput.value);
+  const dateVal = dateInput.value;
 
-  let valid = true;
-
-  const nameVal = name.value.trim();
-  const amountVal = parseFloat(amount.value);
-  const dateVal = date.value;
-
-  if(!nameVal){
-    errName.innerText="กรุณากรอกชื่อรายการ";
-    valid=false;
+  if(!nameVal || isNaN(amountVal) || amountVal <= 0 || !dateVal){
+    alert("กรอกข้อมูลให้ครบ");
+    return;
   }
-
-  if(isNaN(amountVal) || amountVal<=0){
-    errAmount.innerText="จำนวนเงินไม่ถูกต้อง";
-    valid=false;
-  }
-
-  if(!dateVal){
-    errDate.innerText="เลือกวันที่";
-    valid=false;
-  }
-
-  if(!valid) return;
 
   data.push({
-    name:nameVal,
-    amount:amountVal,
-    type:type.value,
-    date:dateVal,
-    category:category.value
+    name: nameVal,
+    amount: amountVal,
+    type: typeInput.value,
+    date: dateVal,
+    category: categoryInput.value
   });
 
   save();
 
-  name.value="";
-  amount.value="";
+  nameInput.value="";
+  amountInput.value="";
 
   render();
 }
@@ -197,34 +57,34 @@ function add(){
 function render(){
   list.innerHTML="";
 
-  const mFilter=monthFilter.value;
-  const cFilter=catFilter.value;
+  const mFilter = monthFilter.value;
+  const cFilter = catFilter.value;
 
-  let income=0,expense=0;
-  let summary={},mIncome={},mExpense={},profitData={};
+  let income=0, expense=0;
+  let summary={}, mIncome={}, mExpense={}, profitData={};
 
   data.forEach(e=>{
     if(mFilter && !e.date.startsWith(mFilter)) return;
     if(cFilter && e.category!==cFilter) return;
 
-    const m=e.date.slice(0,7);
+    const m = e.date.slice(0,7);
 
     if(e.type==="income"){
-      income+=e.amount;
+      income += e.amount;
       mIncome[m]=(mIncome[m]||0)+e.amount;
-    }else{
-      expense+=e.amount;
+    } else {
+      expense += e.amount;
       summary[e.category]=(summary[e.category]||0)+e.amount;
       mExpense[m]=(mExpense[m]||0)+e.amount;
     }
 
-    list.innerHTML+=`
-    <div class="item">
-      <div>${e.name}<br><small>${e.date} • ${e.category}</small></div>
-      <div class="${e.type==='income'?'green':'red'}">
-        ${e.type==='income'?'+':'-'}${e.amount}
-      </div>
-    </div>`;
+    list.innerHTML += `
+      <div class="item">
+        <div>${e.name}<br><small>${e.date} • ${e.category}</small></div>
+        <div style="color:${e.type==='income'?'green':'red'}">
+          ${e.type==='income'?'+':'-'}${e.amount}
+        </div>
+      </div>`;
   });
 
   const months=[...new Set([...Object.keys(mIncome),...Object.keys(mExpense)])];
@@ -233,24 +93,25 @@ function render(){
     profitData[m]=(mIncome[m]||0)-(mExpense[m]||0);
   });
 
-  balance.innerText = income-expense;
+  balance.innerText = income - expense;
 
   drawBar(months,mIncome,mExpense,profitData);
   drawPie(summary);
   drawProfit(months,profitData);
 }
 
+// ✅ FIX Chart ถูกต้อง
 function drawBar(labels,incomeData,expenseData,profitData){
   if(barChart) barChart.destroy();
 
-  barChart=new Chart(barChart,{
+  barChart = new Chart(barCanvas,{
     type:"bar",
     data:{
       labels:labels,
       datasets:[
-        {label:"รายรับ",data:labels.map(m=>incomeData[m]||0)},
-        {label:"รายจ่าย",data:labels.map(m=>expenseData[m]||0)},
-        {label:"กำไร",data:labels.map(m=>profitData[m]||0)}
+        {label:"รายรับ", data:labels.map(m=>incomeData[m]||0), backgroundColor:"#22c55e"},
+        {label:"รายจ่าย", data:labels.map(m=>expenseData[m]||0), backgroundColor:"#ef4444"},
+        {label:"กำไร", data:labels.map(m=>profitData[m]||0)}
       ]
     }
   });
@@ -259,7 +120,7 @@ function drawBar(labels,incomeData,expenseData,profitData){
 function drawPie(summary){
   if(pieChart) pieChart.destroy();
 
-  pieChart=new Chart(pieChart,{
+  pieChart = new Chart(pieCanvas,{
     type:"doughnut",
     data:{
       labels:Object.keys(summary),
@@ -271,12 +132,14 @@ function drawPie(summary){
 function drawProfit(labels,profitData){
   if(profitChart) profitChart.destroy();
 
-  profitChart=new Chart(profitChart,{
+  profitChart = new Chart(profitCanvas,{
     type:"line",
     data:{
       labels:labels,
       datasets:[{
-        data:labels.map(m=>profitData[m]||0)
+        label:"กำไร/ขาดทุน",
+        data:labels.map(m=>profitData[m]||0),
+        borderColor:"#38bdf8"
       }]
     }
   });
@@ -284,6 +147,3 @@ function drawProfit(labels,profitData){
 
 render();
 </script>
-
-</body>
-</html>
