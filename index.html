@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Finance Pro</title>
+<title>Finance App PRO</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -101,12 +101,15 @@ button{
 <div class="card">
 <input id="name" placeholder="รายการ">
 <input id="amount" type="number">
+
 <select id="type">
 <option value="income">รายรับ</option>
 <option value="expense">รายจ่าย</option>
 </select>
+
 <input id="date" type="date">
 <input id="category" placeholder="หมวด">
+
 <button onclick="add()">+ เพิ่ม</button>
 </div>
 
@@ -125,40 +128,49 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🔥 ใส่ config ตรงนี้
+// 🔥 Firebase config ของคุณ
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
+  apiKey: "AIzaSyD7c3HAdLEt_7y1PPstlL8QNcnF1waANAQ",
+  authDomain: "ai-2ca28.firebaseapp.com",
+  projectId: "ai-2ca28",
+  storageBucket: "ai-2ca28.firebasestorage.app",
+  messagingSenderId: "450467403966",
+  appId: "1:450467403966:web:8423069c53d86fe532e6ef",
+  measurementId: "G-F8KFBF14G5"
 };
 
+// init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 let user;
 
+// LOGIN
 window.login = async ()=>{
   try{
-    await signInWithEmailAndPassword(auth, email.value.trim(), pass.value);
+    await signInWithEmailAndPassword(auth, email.value, pass.value);
   }catch(err){
     loginError.innerText = err.message;
   }
 };
 
+// REGISTER
 window.register = async ()=>{
   try{
-    await createUserWithEmailAndPassword(auth, email.value.trim(), pass.value);
+    await createUserWithEmailAndPassword(auth, email.value, pass.value);
     loginError.innerText = "สมัครสำเร็จ";
   }catch(err){
     loginError.innerText = err.message;
   }
 };
 
+// LOGOUT
 window.logout = async ()=>{
   await signOut(auth);
 };
 
+// STATE
 onAuthStateChanged(auth,(u)=>{
   if(u){
     user=u;
@@ -171,6 +183,7 @@ onAuthStateChanged(auth,(u)=>{
   }
 });
 
+// ADD DATA
 window.add = async ()=>{
   await addDoc(collection(db,"expenses"),{
     uid:user.uid,
@@ -182,18 +195,20 @@ window.add = async ()=>{
   });
 };
 
+// DELETE
 window.del = async (id)=>{
   await deleteDoc(doc(db,"expenses",id));
 };
 
-let pie, line;
+let pie,line;
 
+// LOAD REALTIME
 function load(){
   const q = query(collection(db,"expenses"), where("uid","==",user.uid));
 
   onSnapshot(q,(snap)=>{
 
-    let income=0,expense=0;
+    let income=0, expense=0;
     let summary={}, months={};
 
     list.innerHTML="";
@@ -218,11 +233,11 @@ function load(){
       </div>`;
     });
 
-    income.innerText = income;
-    expense.innerText = expense;
+    incomeEl.innerText = income;
+    expenseEl.innerText = expense;
     balance.innerText = income-expense;
 
-    const b = parseFloat(budget.value||0);
+    const b=parseFloat(budget.value||0);
     alertBox.innerText = (b && expense>b) ? "⚠️ เกินงบ!" : "";
 
     drawPie(summary);
@@ -230,6 +245,7 @@ function load(){
   });
 }
 
+// CHART
 function drawPie(summary){
   if(pie) pie.destroy();
   pie = new Chart(pieChart,{
