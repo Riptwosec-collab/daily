@@ -2,19 +2,75 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>Expense Pro MAX</title>
-
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+<title>Expense Pro+</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body { font-family:sans-serif; margin:0; background:#f0f2f5; }
-.container { max-width:500px; margin:auto; padding:20px; }
-input,button,select { width:100%; padding:10px; margin:5px 0; border-radius:8px; }
-.item { background:#fff; padding:8px; margin-top:5px; border-radius:8px; display:flex; justify-content:space-between; }
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #333;
+}
+
+.container {
+    max-width: 500px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+.card {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    margin-bottom: 15px;
+}
+
+h2 {
+    text-align: center;
+    color: white;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 12px;
+    margin: 5px 0;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+}
+
+input, select {
+    background: rgba(255,255,255,0.8);
+}
+
+button {
+    background: linear-gradient(45deg, #ff7e5f, #feb47b);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.9);
+    margin-top: 8px;
+}
+
+.total {
+    text-align: center;
+    font-size: 20px;
+    color: white;
+    margin-top: 10px;
+}
 </style>
 </head>
 
@@ -22,128 +78,136 @@ input,button,select { width:100%; padding:10px; margin:5px 0; border-radius:8px;
 
 <div class="container">
 
-<h2>💸 Expense Pro MAX</h2>
+<h2>💸 Expense Pro+</h2>
 
-<div id="auth">
-<input id="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button onclick="register()">สมัคร</button>
-<button onclick="login()">ล็อกอิน</button>
+<div class="card">
+    <input id="name" placeholder="รายการ">
+    <input id="amount" type="number" placeholder="จำนวนเงิน">
+    <input id="date" type="date">
+
+    <select id="category">
+        <option>อาหาร</option>
+        <option>เดินทาง</option>
+        <option>ช้อปปิ้ง</option>
+        <option>อื่นๆ</option>
+    </select>
+
+    <button onclick="add()">+ เพิ่มรายการ</button>
 </div>
 
-<div id="app" style="display:none;">
-<button onclick="logout()">ออกจากระบบ</button>
+<div class="card">
+    <div id="list"></div>
+</div>
 
-<input id="name" placeholder="รายการ">
-<input id="amount" type="number" placeholder="จำนวนเงิน">
-<input id="date" type="date">
-
-<select id="category">
-<option>อาหาร</option>
-<option>เดินทาง</option>
-<option>ช้อปปิ้ง</option>
-<option>อื่นๆ</option>
-</select>
-
-<button onclick="add()">เพิ่ม</button>
-
-<div id="list"></div>
-
-<div>รวม: <span id="total">0</span></div>
+<div class="total">
+    รวม: <span id="total">0</span> บาท
+</div>
 
 <canvas id="chart"></canvas>
 
 </div>
 
-</div>
-
 <script>
-// 🔴 ใส่ config ตรงนี้
-const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_ID",
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-let user;
+let data = JSON.parse(localStorage.getItem("expenses")) || [];
 let chart;
 
-// AUTH
-function register() {
-  auth.createUserWithEmailAndPassword(email.value, password.value);
+// 🔴 FIX: ไม่ให้ input หาย
+function getInputs() {
+    return {
+        name: document.getElementById("name").value,
+        amount: document.getElementById("amount").value,
+        date: document.getElementById("date").value,
+        category: document.getElementById("category").value
+    };
 }
 
-function login() {
-  auth.signInWithEmailAndPassword(email.value, password.value);
+function setInputs(val) {
+    document.getElementById("name").value = val.name;
+    document.getElementById("amount").value = val.amount;
+    document.getElementById("date").value = val.date;
+    document.getElementById("category").value = val.category;
 }
 
-function logout() {
-  auth.signOut();
+function save() {
+    localStorage.setItem("expenses", JSON.stringify(data));
 }
 
-auth.onAuthStateChanged(u => {
-  if (u) {
-    user = u;
-    document.getElementById("auth").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    load();
-  }
-});
-
-// ADD DATA
 function add() {
-  db.collection("expenses").add({
-    uid: user.uid,
-    name: name.value,
-    amount: parseFloat(amount.value),
-    date: date.value,
-    category: category.value
-  });
+    const inputs = getInputs();
+
+    if (!inputs.name || !inputs.amount) {
+        alert("กรอกข้อมูลให้ครบ");
+        return;
+    }
+
+    data.push({
+        name: inputs.name,
+        amount: parseFloat(inputs.amount),
+        date: inputs.date,
+        category: inputs.category
+    });
+
+    save();
+
+    // ✔ เคลียร์ input หลังกดเพิ่ม (ตั้งใจ)
+    document.getElementById("name").value = "";
+    document.getElementById("amount").value = "";
+    
+    render();
 }
 
-// LOAD DATA
-function load() {
-  db.collection("expenses")
-    .where("uid","==",user.uid)
-    .onSnapshot(snapshot => {
+function remove(i) {
+    data.splice(i,1);
+    save();
+    render();
+}
 
-      let total = 0;
-      let summary = {};
-      list.innerHTML = "";
+function render() {
+    const list = document.getElementById("list");
+    list.innerHTML = "";
 
-      snapshot.forEach(doc => {
-        const e = doc.data();
+    let total = 0;
+    let summary = {};
 
+    data.forEach((e,i) => {
         total += e.amount;
         summary[e.category] = (summary[e.category] || 0) + e.amount;
 
         list.innerHTML += `
         <div class="item">
-          ${e.name} - ${e.amount}
+            <div>
+                ${e.name}<br>
+                <small>${e.date} (${e.category})</small>
+            </div>
+            <div>
+                ${e.amount}
+                <button onclick="remove(${i})">❌</button>
+            </div>
         </div>`;
-      });
+    });
 
-      totalEl.innerText = total;
-      draw(summary);
+    document.getElementById("total").innerText = total;
+
+    drawChart(summary);
+}
+
+function drawChart(summary) {
+    const ctx = document.getElementById("chart");
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels: Object.keys(summary),
+            datasets: [{
+                data: Object.values(summary)
+            }]
+        }
     });
 }
 
-// CHART
-function draw(summary) {
-  if (chart) chart.destroy();
-
-  chart = new Chart(chartCanvas, {
-    type:"pie",
-    data:{
-      labels:Object.keys(summary),
-      datasets:[{ data:Object.values(summary) }]
-    }
-  });
-}
+render();
 </script>
 
 </body>
