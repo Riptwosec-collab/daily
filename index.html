@@ -1,145 +1,93 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Finance Cloud PRO</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-body{
-  margin:0;
-  font-family:system-ui;
-  background:linear-gradient(135deg,#0f172a,#1e293b);
-  color:#fff;
-}
-
-.container{
-  max-width:420px;
-  margin:auto;
-  padding:12px;
-}
-
-.card{
-  background:rgba(255,255,255,0.08);
-  backdrop-filter:blur(12px);
-  border-radius:18px;
-  padding:14px;
-  margin-bottom:12px;
-}
-
-.dashboard{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-.stat{
-  background:rgba(255,255,255,0.1);
-  padding:12px;
-  border-radius:14px;
-  text-align:center;
-}
-
-input,select,button{
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  border-radius:10px;
-  border:none;
-}
-
-button{
-  background:#2563eb;
-  color:#fff;
-  font-weight:bold;
-}
-
-.item{
-  background:white;
-  color:black;
-  padding:10px;
-  border-radius:10px;
-  margin-top:6px;
-  display:flex;
-  justify-content:space-between;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Cloud PRO</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { margin: 0; font-family: system-ui; background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; min-height: 100vh; }
+        .container { max-width: 420px; margin: auto; padding: 12px; }
+        .card { background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border-radius: 18px; padding: 14px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat { background: rgba(255, 255, 255, 0.1); padding: 12px; border-radius: 14px; text-align: center; }
+        input, select, button { width: 100%; padding: 10px; margin: 6px 0; border-radius: 10px; border: none; box-sizing: border-box; }
+        button { background: #2563eb; color: #fff; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #1d4ed8; }
+        .btn-del { background: #ef4444; width: auto; padding: 4px 10px; font-size: 12px; margin: 0; }
+        .item { background: white; color: black; padding: 10px; border-radius: 10px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .item-info { display: flex; flex-direction: column; }
+        .item-amount { font-weight: bold; margin-left: auto; margin-right: 10px; }
+    </style>
 </head>
-
 <body>
 
 <div class="container">
+    <!-- LOGIN -->
+    <div id="authBox" class="card">
+        <h3>🔐 Login / Register</h3>
+        <input id="email" placeholder="Email">
+        <input id="pass" type="password" placeholder="Password">
+        <button onclick="login()">เข้าสู่ระบบ</button>
+        <button onclick="register()" style="background: #475569;">สมัครสมาชิก</button>
+        <div id="loginError" style="color:#fb7185; font-size: 14px; margin-top: 5px;"></div>
+    </div>
 
-<!-- LOGIN -->
-<div id="authBox" class="card">
-<h3>🔐 Login</h3>
-<input id="email" placeholder="Email">
-<input id="pass" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
-<button onclick="register()">Register</button>
-<div id="loginError" style="color:#ef4444"></div>
-</div>
+    <!-- APP -->
+    <div id="appBox" style="display:none">
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>ยินดีต้อนรับ</span>
+            <button onclick="logout()" style="width: auto; background: #475569;">Logout</button>
+        </div>
 
-<!-- APP -->
-<div id="appBox" style="display:none">
+        <div class="dashboard">
+            <div class="stat">รายรับ<br><b id="incomeVal">0</b></div>
+            <div class="stat">รายจ่าย<br><b id="expenseVal">0</b></div>
+            <div class="stat">คงเหลือ<br><b id="balanceVal">0</b></div>
+            <div class="stat">งบรายจ่าย<br><input id="budget" type="number" placeholder="ตั้งงบ" style="margin:0; padding:4px; text-align:center;"></div>
+        </div>
 
-<div class="card">
-<button onclick="logout()">Logout</button>
-</div>
+        <div id="alertBox" style="text-align: center; font-weight: bold; margin: 5px 0;"></div>
 
-<div class="dashboard">
-<div class="stat">รายรับ<br><b id="income">0</b></div>
-<div class="stat">รายจ่าย<br><b id="expense">0</b></div>
-<div class="stat">คงเหลือ<br><b id="balance">0</b></div>
-<div class="stat">งบ<br><input id="budget"></div>
-</div>
+        <div class="card">
+            <input id="name" placeholder="ชื่อรายการ">
+            <input id="amount" type="number" placeholder="จำนวนเงิน">
+            <select id="type">
+                <option value="income">รายรับ (+)</option>
+                <option value="expense">รายจ่าย (-)</option>
+            </select>
+            <input id="date" type="date">
+            <input id="category" placeholder="หมวดหมู่ (เช่น อาหาร, เงินเดือน)">
+            <button onclick="add()">+ เพิ่มรายการ</button>
+        </div>
 
-<div id="alertBox" style="color:#ff4444"></div>
+        <div class="card">
+            <div id="list"></div>
+        </div>
 
-<div class="card">
-<input id="name" placeholder="รายการ">
-<input id="amount" type="number">
-
-<select id="type">
-<option value="income">รายรับ</option>
-<option value="expense">รายจ่าย</option>
-</select>
-
-<input id="date" type="date">
-<input id="category" placeholder="หมวด">
-
-<button onclick="add()">+ เพิ่ม</button>
-</div>
-
-<div class="card" id="list"></div>
-
-<div class="card"><canvas id="pieChart"></canvas></div>
-<div class="card"><canvas id="profitChart"></canvas></div>
-
-</div>
-
+        <div class="card">
+            <canvas id="pieChart"></canvas>
+        </div>
+        <div class="card">
+            <canvas id="profitChart"></canvas>
+        </div>
+    </div>
 </div>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🔥 Firebase Config (ของจริงจากคุณ)
 const firebaseConfig = {
-  apiKey: "AIzaSyD7c3HAdLEt_7y1PPstlL8QNcnF1waANAQ",
-  authDomain: "ai-2ca28.firebaseapp.com",
-  projectId: "ai-2ca28",
-  storageBucket: "ai-2ca28.firebasestorage.app",
-  messagingSenderId: "450467403966",
-  appId: "1:450467403966:web:8423069c53d86fe532e6ef",
-  measurementId: "G-F8KFBF14G5"
+    apiKey: "AIzaSyD7c3HAdLEt_7y1PPstlL8QNcnF1waANAQ",
+    authDomain: "ai-2ca28.firebaseapp.com",
+    projectId: "ai-2ca28",
+    storageBucket: "ai-2ca28.firebasestorage.app",
+    messagingSenderId: "450467403966",
+    appId: "1:450467403966:web:8423069c53d86fe532e6ef"
 };
 
-// INIT
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -147,123 +95,147 @@ const db = getFirestore(app);
 let user;
 let pie, line;
 
-// 🔐 LOGIN
-window.login = async ()=>{
-  try{
-    await signInWithEmailAndPassword(auth, email.value, pass.value);
-  }catch(err){
-    loginError.innerText = err.message;
-  }
+// 🔐 AUTH FUNCTIONS
+window.login = async () => {
+    try {
+        await signInWithEmailAndPassword(auth, email.value, pass.value);
+    } catch (e) { loginError.innerText = "Error: " + e.message; }
 };
 
-// 🆕 REGISTER
-window.register = async ()=>{
-  try{
-    await createUserWithEmailAndPassword(auth, email.value, pass.value);
-    loginError.innerText = "สมัครสำเร็จ";
-  }catch(err){
-    loginError.innerText = err.message;
-  }
+window.register = async () => {
+    try {
+        await createUserWithEmailAndPassword(auth, email.value, pass.value);
+    } catch (e) { loginError.innerText = "Error: " + e.message; }
 };
 
-// 🚪 LOGOUT
-window.logout = async ()=>{
-  await signOut(auth);
-};
+window.logout = () => signOut(auth);
 
-// 👤 AUTH STATE
-onAuthStateChanged(auth,(u)=>{
-  if(u){
-    user=u;
-    authBox.style.display="none";
-    appBox.style.display="block";
-    load();
-  }else{
-    authBox.style.display="block";
-    appBox.style.display="none";
-  }
+onAuthStateChanged(auth, (u) => {
+    if (u) {
+        user = u;
+        authBox.style.display = "none";
+        appBox.style.display = "block";
+        load();
+    } else {
+        authBox.style.display = "block";
+        appBox.style.display = "none";
+    }
 });
 
 // ➕ ADD DATA
-window.add = async ()=>{
-  if(!user) return;
-
-  await addDoc(collection(db,"expenses"),{
-    uid:user.uid,
-    name:name.value,
-    amount:parseFloat(amount.value || 0),
-    type:type.value,
-    date:date.value,
-    category:category.value || "ทั่วไป"
-  });
+window.add = async () => {
+    if (!user || !amount.value) return;
+    try {
+        await addDoc(collection(db, "expenses"), {
+            uid: user.uid,
+            name: name.value || "ไม่มีชื่อ",
+            amount: Number(amount.value),
+            type: type.value,
+            date: date.value || new Date().toISOString().split('T')[0],
+            category: category.value || "ทั่วไป",
+            createdAt: Date.now()
+        });
+        name.value = ""; amount.value = "";
+    } catch (e) { console.error(e); }
 };
 
-// 🗑 DELETE
-window.del = async (id)=>{
-  await deleteDoc(doc(db,"expenses",id));
+// 🗑 DELETE DATA
+window.del = async (id) => {
+    if(confirm("ลบรายการนี้ใช่หรือไม่?")) {
+        await deleteDoc(doc(db, "expenses", id));
+    }
 };
 
-// 📊 LOAD DATA
-function load(){
-  const q = query(collection(db,"expenses"), where("uid","==",user.uid));
+// 📊 LOAD & SYNC
+function load() {
+    const q = query(collection(db, "expenses"), where("uid", "==", user.uid));
 
-  onSnapshot(q,(snap)=>{
+    onSnapshot(q, (snap) => {
+        let totalIncome = 0, totalExpense = 0;
+        let summary = {}, monthly = {};
+        list.innerHTML = "";
 
-    let income=0, expense=0;
-    let summary={}, months={};
+        snap.forEach(d => {
+            const e = d.data();
+            const val = Number(e.amount);
 
-    list.innerHTML="";
+            if (e.type === "income") {
+                totalIncome += val;
+            } else {
+                totalExpense += val;
+                summary[e.category] = (summary[e.category] || 0) + val;
+            }
 
-    snap.forEach(d=>{
-      const e=d.data();
-      const m=e.date?.slice(0,7);
+            const m = e.date ? e.date.slice(0, 7) : "ไม่ระบุ";
+            monthly[m] = (monthly[m] || 0) + (e.type === "income" ? val : -val);
 
-      if(e.type==="income"){
-        income+=e.amount;
-        months[m]=(months[m]||0)+e.amount;
-      }else{
-        expense+=e.amount;
-        summary[e.category]=(summary[e.category]||0)+e.amount;
-        months[m]=(months[m]||0)-e.amount;
-      }
+            list.innerHTML += `
+                <div class="item">
+                    <div class="item-info">
+                        <small style="color:gray">${e.date}</small>
+                        <span>${e.name}</span>
+                    </div>
+                    <div class="item-amount" style="color:${e.type === 'income' ? '#10b981' : '#ef4444'}">
+                        ${e.type === 'income' ? '+' : '-'}${val.toLocaleString()}
+                    </div>
+                    <button class="btn-del" onclick="del('${d.id}')">ลบ</button>
+                </div>`;
+        });
 
-      list.innerHTML+=`
-        <div class="item">
-          ${e.name} (${e.amount})
-          <button onclick="del('${d.id}')">ลบ</button>
-        </div>`;
+        document.getElementById('incomeVal').innerText = totalIncome.toLocaleString();
+        document.getElementById('expenseVal').innerText = totalExpense.toLocaleString();
+        document.getElementById('balanceVal').innerText = (totalIncome - totalExpense).toLocaleString();
+
+        const b = Number(budget.value || 0);
+        alertBox.innerText = (b > 0 && totalExpense > b) ? "⚠️ ระวัง! เกินงบที่ตั้งไว้" : "";
+
+        drawPie(summary);
+        drawLine(monthly);
     });
-
-    incomeEl.innerText = income;
-    expenseEl.innerText = expense;
-    balance.innerText = income-expense;
-
-    const b=parseFloat(budget.value||0);
-    alertBox.innerText = (b && expense>b) ? "⚠️ เกินงบ!" : "";
-
-    drawPie(summary);
-    drawLine(months);
-  });
 }
 
-// 📊 CHARTS
-function drawPie(summary){
-  if(pie) pie.destroy();
-  pie = new Chart(pieChart,{
-    type:"doughnut",
-    data:{labels:Object.keys(summary),datasets:[{data:Object.values(summary)}]}
-  });
+function drawPie(data) {
+    if (pie) pie.destroy();
+    const ctx = document.getElementById('pieChart').getContext('2d');
+    pie = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels: Object.keys(data),
+            datasets: [{ 
+                data: Object.values(data),
+                backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4']
+            }]
+        },
+        options: { plugins: { title: { display: true, text: 'สัดส่วนรายจ่าย', color: '#fff' } } }
+    });
 }
 
-function drawLine(months){
-  if(line) line.destroy();
-  line = new Chart(profitChart,{
-    type:"line",
-    data:{labels:Object.keys(months),datasets:[{data:Object.values(months)}]}
-  });
+function drawLine(data) {
+    if (line) line.destroy();
+    const ctx = document.getElementById('profitChart').getContext('2d');
+    // เรียงเดือนตามลำดับเวลา
+    const sortedKeys = Object.keys(data).sort();
+    line = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: sortedKeys,
+            datasets: [{
+                label: "กำไร/ขาดทุนสะสม",
+                data: sortedKeys.map(k => data[k]),
+                borderColor: "#22c55e",
+                backgroundColor: "rgba(34, 197, 94, 0.2)",
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: { 
+            scales: { 
+                y: { ticks: { color: '#fff' } },
+                x: { ticks: { color: '#fff' } }
+            }
+        }
+    });
 }
-
 </script>
-
 </body>
 </html>
