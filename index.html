@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Finance Bank UI</title>
+<title>Finance Pro</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -79,6 +79,7 @@ button{
 <input id="pass" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
 <button onclick="register()">Register</button>
+<div id="loginError" style="color:#ef4444"></div>
 </div>
 
 <!-- APP -->
@@ -95,7 +96,7 @@ button{
 <div class="stat">งบ<br><input id="budget"></div>
 </div>
 
-<div id="alertBox"></div>
+<div id="alertBox" style="color:#ef4444"></div>
 
 <div class="card">
 <input id="name" placeholder="รายการ">
@@ -124,8 +125,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🔥 ใส่ config
-const firebaseConfig = { /* YOUR CONFIG */ };
+// 🔥 ใส่ config ตรงนี้
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+};
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -134,16 +139,25 @@ const db = getFirestore(app);
 let user;
 
 window.login = async ()=>{
-  await signInWithEmailAndPassword(auth, email.value, pass.value);
-}
+  try{
+    await signInWithEmailAndPassword(auth, email.value.trim(), pass.value);
+  }catch(err){
+    loginError.innerText = err.message;
+  }
+};
 
 window.register = async ()=>{
-  await createUserWithEmailAndPassword(auth, email.value, pass.value);
-}
+  try{
+    await createUserWithEmailAndPassword(auth, email.value.trim(), pass.value);
+    loginError.innerText = "สมัครสำเร็จ";
+  }catch(err){
+    loginError.innerText = err.message;
+  }
+};
 
 window.logout = async ()=>{
   await signOut(auth);
-}
+};
 
 onAuthStateChanged(auth,(u)=>{
   if(u){
@@ -166,11 +180,11 @@ window.add = async ()=>{
     date:date.value,
     category:category.value
   });
-}
+};
 
 window.del = async (id)=>{
   await deleteDoc(doc(db,"expenses",id));
-}
+};
 
 let pie, line;
 
@@ -180,13 +194,12 @@ function load(){
   onSnapshot(q,(snap)=>{
 
     let income=0,expense=0;
-    let summary={}, months={}, profit={};
+    let summary={}, months={};
 
     list.innerHTML="";
 
     snap.forEach(d=>{
       const e=d.data();
-
       const m=e.date?.slice(0,7);
 
       if(e.type==="income"){
@@ -205,12 +218,12 @@ function load(){
       </div>`;
     });
 
+    income.innerText = income;
+    expense.innerText = expense;
     balance.innerText = income-expense;
-    incomeEl.innerText = income;
-    expenseEl.innerText = expense;
 
-    const budgetVal = parseFloat(budget.value||0);
-    alertBox.innerText = (budgetVal && expense>budgetVal) ? "⚠️ เกินงบ!" : "";
+    const b = parseFloat(budget.value||0);
+    alertBox.innerText = (b && expense>b) ? "⚠️ เกินงบ!" : "";
 
     drawPie(summary);
     drawLine(months);
