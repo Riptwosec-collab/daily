@@ -2,91 +2,70 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<title>Expense Pro+</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance Ultimate</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-* { box-sizing: border-box; }
-
-body {
-    font-family: 'Segoe UI', sans-serif;
-    margin: 0;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: #333;
+:root{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --text:#e5e7eb;
+  --green:#22c55e;
+  --red:#ef4444;
+  --blue:#38bdf8;
 }
 
-.container {
-    max-width: 500px;
-    margin: 20px auto;
-    padding: 20px;
+body{
+  margin:0;
+  font-family:system-ui;
+  background:var(--bg);
+  color:var(--text);
 }
 
-.card {
-    background: rgba(255,255,255,0.15);
-    backdrop-filter: blur(15px);
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    margin-bottom: 15px;
+.container{
+  max-width:520px;
+  margin:auto;
+  padding:15px;
 }
 
-h2 {
-    text-align: center;
-    color: white;
+.card{
+  background:var(--card);
+  border-radius:16px;
+  padding:12px;
+  margin-bottom:12px;
 }
 
-input, select, button {
-    width: 100%;
-    padding: 12px;
-    margin: 5px 0;
-    border-radius: 10px;
-    border: none;
-    font-size: 14px;
+input,select,button{
+  width:100%;
+  padding:10px;
+  margin:5px 0;
+  border-radius:10px;
+  border:none;
 }
 
-input, select {
-    background: rgba(255,255,255,0.85);
+button{
+  background:#2563eb;
+  color:white;
 }
 
-button {
-    background: linear-gradient(45deg, #ff7e5f, #feb47b);
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.2s;
+.item{
+  background:white;
+  color:black;
+  padding:10px;
+  border-radius:10px;
+  margin-top:5px;
+  display:flex;
+  justify-content:space-between;
 }
 
-button:hover {
-    transform: scale(1.03);
-}
+.green{color:var(--green)}
+.red{color:var(--red)}
 
-.item {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px;
-    border-radius: 10px;
-    background: rgba(255,255,255,0.9);
-    margin-top: 8px;
-    align-items: center;
-}
-
-.total {
-    text-align: center;
-    font-size: 22px;
-    color: white;
-    margin-top: 10px;
-}
-
-.top-bar {
-    display: flex;
-    gap: 10px;
-}
-
-.small-btn {
-    flex: 1;
-    font-size: 12px;
-    padding: 8px;
+.balance{
+  text-align:center;
+  font-size:20px;
 }
 </style>
 </head>
@@ -95,143 +74,189 @@ button:hover {
 
 <div class="container">
 
-<h2>💸 Expense Pro+</h2>
+<h2>🏦 Finance Dashboard</h2>
 
 <div class="card">
-    <input id="name" placeholder="รายการ">
-    <input id="amount" type="number" placeholder="จำนวนเงิน">
-    <input id="date" type="date">
+<input id="name" placeholder="รายการ">
+<input id="amount" type="number" placeholder="จำนวนเงิน">
 
-    <select id="category">
-        <option>อาหาร</option>
-        <option>เดินทาง</option>
-        <option>ช้อปปิ้ง</option>
-        <option>อื่นๆ</option>
-    </select>
+<select id="type">
+<option value="income">รายรับ</option>
+<option value="expense">รายจ่าย</option>
+</select>
 
-    <button onclick="add()">+ เพิ่มรายการ</button>
+<input id="date" type="date">
+
+<select id="category">
+<option>อาหาร</option>
+<option>เดินทาง</option>
+<option>เงินเดือน</option>
+<option>อื่นๆ</option>
+</select>
+
+<button onclick="add()">เพิ่ม</button>
 </div>
 
 <div class="card">
-    <div class="top-bar">
-        <button class="small-btn" onclick="clearAll()">🗑 ล้างทั้งหมด</button>
-        <button class="small-btn" onclick="exportCSV()">📤 Export</button>
-    </div>
-
-    <div id="list"></div>
+<input type="month" id="monthFilter" onchange="render()">
+<select id="catFilter" onchange="render()">
+<option value="">ทุกหมวด</option>
+<option>อาหาร</option>
+<option>เดินทาง</option>
+<option>เงินเดือน</option>
+<option>อื่นๆ</option>
+</select>
 </div>
 
-<div class="total">
-    รวม: <span id="total">0</span> บาท
+<div class="card balance">
+💰 เหลือ: <span id="balance">0</span>
 </div>
 
-<canvas id="chart"></canvas>
+<div class="card" id="list"></div>
+
+<div class="card"><canvas id="barChart"></canvas></div>
+<div class="card"><canvas id="pieChart"></canvas></div>
+<div class="card"><canvas id="profitChart"></canvas></div>
 
 </div>
 
 <script>
 let data = JSON.parse(localStorage.getItem("expenses")) || [];
-let chart;
+let barChart, pieChart, profitChart;
 
-function save() {
-    localStorage.setItem("expenses", JSON.stringify(data));
+function save(){
+  localStorage.setItem("expenses",JSON.stringify(data));
 }
 
-function add() {
-    const name = document.getElementById("name").value;
-    const amount = document.getElementById("amount").value;
-    const date = document.getElementById("date").value;
-    const category = document.getElementById("category").value;
+function add(){
+  const e={
+    name:name.value,
+    amount:parseFloat(amount.value),
+    type:type.value,
+    date:date.value,
+    category:category.value
+  };
 
-    if (!name || !amount) return alert("กรอกข้อมูลให้ครบ");
+  if(!e.name || !e.amount) return alert("กรอกข้อมูล");
 
-    data.push({
-        name,
-        amount: parseFloat(amount),
-        date,
-        category
-    });
+  data.push(e);
+  save();
 
-    save();
+  name.value="";
+  amount.value="";
 
-    // เคลียร์ input เฉพาะตอนกดเพิ่ม
-    document.getElementById("name").value = "";
-    document.getElementById("amount").value = "";
-
-    render();
+  render();
 }
 
-function remove(i) {
-    data.splice(i,1);
-    save();
-    render();
-}
+function render(){
+  const list=document.getElementById("list");
+  list.innerHTML="";
 
-function clearAll() {
-    if (confirm("ลบทั้งหมดจริงไหม")) {
-        data = [];
-        save();
-        render();
+  const mFilter=document.getElementById("monthFilter").value;
+  const cFilter=document.getElementById("catFilter").value;
+
+  let income=0, expense=0;
+  let summary={};
+  let mIncome={}, mExpense={}, profitData={};
+
+  data.forEach(e=>{
+    if(mFilter && !e.date.startsWith(mFilter)) return;
+    if(cFilter && e.category!==cFilter) return;
+
+    const m = e.date?.slice(0,7) || "ไม่ระบุ";
+
+    if(e.type==="income"){
+      income+=e.amount;
+      mIncome[m]=(mIncome[m]||0)+e.amount;
+    }else{
+      expense+=e.amount;
+      summary[e.category]=(summary[e.category]||0)+e.amount;
+      mExpense[m]=(mExpense[m]||0)+e.amount;
     }
+
+    list.innerHTML+=`
+    <div class="item">
+      <div>${e.name}<br><small>${e.date} • ${e.category}</small></div>
+      <div class="${e.type==='income'?'green':'red'}">
+        ${e.type==='income'?'+':'-'}${e.amount}
+      </div>
+    </div>`;
+  });
+
+  const months=[...new Set([...Object.keys(mIncome),...Object.keys(mExpense)])];
+
+  months.forEach(m=>{
+    profitData[m]=(mIncome[m]||0)-(mExpense[m]||0);
+  });
+
+  balance.innerText = income-expense;
+
+  drawBar(months,mIncome,mExpense,profitData);
+  drawPie(summary);
+  drawProfit(months,profitData);
 }
 
-function render() {
-    const list = document.getElementById("list");
-    list.innerHTML = "";
+function drawBar(labels,incomeData,expenseData,profitData){
+  if(barChart) barChart.destroy();
 
-    let total = 0;
-    let summary = {};
-
-    data.forEach((e,i) => {
-        total += e.amount;
-        summary[e.category] = (summary[e.category] || 0) + e.amount;
-
-        list.innerHTML += `
-        <div class="item">
-            <div>
-                ${e.name}<br>
-                <small>${e.date || "-"} (${e.category})</small>
-            </div>
-            <div>
-                ${e.amount}
-                <button onclick="remove(${i})">❌</button>
-            </div>
-        </div>`;
-    });
-
-    document.getElementById("total").innerText = total;
-
-    drawChart(summary);
-}
-
-function drawChart(summary) {
-    const ctx = document.getElementById("chart");
-
-    if (chart) chart.destroy();
-
-    chart = new Chart(ctx, {
-        type: "doughnut",
-        data: {
-            labels: Object.keys(summary),
-            datasets: [{
-                data: Object.values(summary)
-            }]
+  barChart=new Chart(barChartCanvas,{
+    type:"bar",
+    data:{
+      labels:labels,
+      datasets:[
+        {
+          label:"รายรับ",
+          data:labels.map(m=>incomeData[m]||0),
+          backgroundColor:"#22c55e"
+        },
+        {
+          label:"รายจ่าย",
+          data:labels.map(m=>expenseData[m]||0),
+          backgroundColor:"#ef4444"
+        },
+        {
+          label:"กำไร/ขาดทุน",
+          data:labels.map(m=>profitData[m]||0),
+          backgroundColor:labels.map(m=>profitData[m]>=0?"#22c55e":"#ef4444")
         }
-    });
+      ]
+    }
+  });
 }
 
-function exportCSV() {
-    let csv = "name,amount,date,category\n";
-    data.forEach(e => {
-        csv += `${e.name},${e.amount},${e.date},${e.category}\n`;
-    });
+function drawPie(summary){
+  if(pieChart) pieChart.destroy();
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "expenses.csv";
-    a.click();
+  pieChart=new Chart(pieChartCanvas,{
+    type:"doughnut",
+    data:{
+      labels:Object.keys(summary),
+      datasets:[{data:Object.values(summary)}]
+    }
+  });
 }
+
+function drawProfit(labels,profitData){
+  if(profitChart) profitChart.destroy();
+
+  profitChart=new Chart(profitChartCanvas,{
+    type:"line",
+    data:{
+      labels:labels,
+      datasets:[{
+        label:"กำไร/ขาดทุน",
+        data:labels.map(m=>profitData[m]||0),
+        borderColor:"#38bdf8",
+        fill:true,
+        backgroundColor:labels.map(m=>profitData[m]>=0?"rgba(34,197,94,0.2)":"rgba(239,68,68,0.2)")
+      }]
+    }
+  });
+}
+
+const barChartCanvas=document.getElementById("barChart");
+const pieChartCanvas=document.getElementById("pieChart");
+const profitChartCanvas=document.getElementById("profitChart");
 
 render();
 </script>
