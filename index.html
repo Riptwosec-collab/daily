@@ -3,38 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Finance Stable</title>
+<title>Finance Pro Stable</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
   margin:0;
-  font-family:sans-serif;
-  background:#0f172a;
+  font-family:system-ui;
+  background:linear-gradient(135deg,#0f172a,#1e293b);
   color:#fff;
 }
+
 .container{
-  max-width:500px;
+  max-width:520px;
   margin:auto;
   padding:15px;
 }
+
 .card{
-  background:#1e293b;
-  padding:12px;
-  border-radius:12px;
-  margin-bottom:10px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(10px);
+  padding:14px;
+  border-radius:16px;
+  margin-bottom:12px;
 }
+
 input,select,button{
   width:100%;
   padding:10px;
-  margin:5px 0;
+  margin:6px 0;
+  border-radius:10px;
+  border:none;
 }
-button{background:#2563eb;color:#fff}
+
+button{
+  background:#2563eb;
+  color:white;
+  font-weight:bold;
+}
+
+.balance{
+  text-align:center;
+  font-size:22px;
+}
+
 .item{
-  background:#fff;color:#000;padding:10px;border-radius:8px;margin-top:5px;
-  display:flex;justify-content:space-between;
+  background:white;
+  color:black;
+  padding:10px;
+  border-radius:10px;
+  margin-top:5px;
+  display:flex;
+  justify-content:space-between;
 }
+
+.green{color:#22c55e}
+.red{color:#ef4444}
 </style>
 </head>
 
@@ -42,29 +67,47 @@ button{background:#2563eb;color:#fff}
 
 <div class="container">
 
-<h2>Finance App</h2>
+<h2>🏦 Finance Dashboard</h2>
 
+<!-- ADD -->
 <div class="card">
 <input id="name" placeholder="รายการ">
 <input id="amount" type="number" placeholder="จำนวนเงิน">
+
 <select id="type">
 <option value="income">รายรับ</option>
 <option value="expense">รายจ่าย</option>
 </select>
+
 <input id="date" type="date">
+
 <select id="category">
 <option>อาหาร</option>
 <option>เดินทาง</option>
 <option>เงินเดือน</option>
 <option>อื่นๆ</option>
 </select>
-<button onclick="add()">เพิ่ม</button>
+
+<button onclick="add()">+ เพิ่ม</button>
 </div>
 
-<div class="card">💰 เหลือ: <span id="balance">0</span></div>
+<!-- MONTH SELECT -->
+<div class="card">
+📅 เลือกเดือนย้อนหลัง
+<input type="month" id="monthFilter" onchange="render()">
+</div>
 
+<!-- SUMMARY -->
+<div class="card balance">
+💰 เหลือ: <span id="balance">0</span>
+</div>
+
+<div class="card" id="summaryBox"></div>
+
+<!-- LIST -->
 <div class="card" id="list"></div>
 
+<!-- CHART -->
 <div class="card"><canvas id="barChart"></canvas></div>
 <div class="card"><canvas id="profitChart"></canvas></div>
 
@@ -78,15 +121,19 @@ const amountEl = document.getElementById("amount");
 const typeEl = document.getElementById("type");
 const dateEl = document.getElementById("date");
 const categoryEl = document.getElementById("category");
+
+const monthFilter = document.getElementById("monthFilter");
+
 const listEl = document.getElementById("list");
 const balanceEl = document.getElementById("balance");
+const summaryBox = document.getElementById("summaryBox");
 
 const barCanvas = document.getElementById("barChart");
 const profitCanvas = document.getElementById("profitChart");
 
 let barChart, profitChart;
 
-// auto date
+// default date
 dateEl.value = new Date().toISOString().split("T")[0];
 
 function save(){
@@ -122,11 +169,15 @@ function add(){
 function render(){
   listEl.innerHTML="";
 
+  const selectedMonth = monthFilter.value;
+
   let income=0, expense=0;
-  let mIncome={}, mExpense={}, profit={};
+  let mIncome={}, mExpense={};
 
   data.forEach(e=>{
-    const m=e.date.slice(0,7);
+    if(selectedMonth && !e.date.startsWith(selectedMonth)) return;
+
+    const m = e.date.slice(0,7);
 
     if(e.type==="income"){
       income+=e.amount;
@@ -138,48 +189,56 @@ function render(){
 
     listEl.innerHTML+=`
     <div class="item">
-      ${e.name}
-      <span>${e.type==="income"?"+":"-"}${e.amount}</span>
+      <div>${e.name}<br><small>${e.date} • ${e.category}</small></div>
+      <div class="${e.type==='income'?'green':'red'}">
+        ${e.type==='income'?'+':'-'}${e.amount}
+      </div>
     </div>`;
   });
 
-  const months=[...new Set([...Object.keys(mIncome),...Object.keys(mExpense)])];
+  const profit = income-expense;
 
-  months.forEach(m=>{
-    profit[m]=(mIncome[m]||0)-(mExpense[m]||0);
-  });
+  balanceEl.innerText = profit;
 
-  balanceEl.innerText = income-expense;
+  // 📊 summary monthly
+  summaryBox.innerHTML = `
+    📊 รายรับ: ${income} บาท<br>
+    📉 รายจ่าย: ${expense} บาท<br>
+    💰 กำไร/ขาดทุน: ${profit} บาท
+  `;
 
-  drawBar(months,mIncome,mExpense);
-  drawProfit(months,profit);
+  drawBar(Object.keys(mIncome), mIncome, mExpense);
+  drawProfit(Object.keys(mIncome), mIncome, mExpense);
 }
 
-function drawBar(labels,income,expense){
+function drawBar(labels, income, expense){
   if(barChart) barChart.destroy();
 
-  barChart=new Chart(barCanvas,{
+  barChart = new Chart(barCanvas,{
     type:"bar",
     data:{
       labels:labels,
       datasets:[
-        {label:"รายรับ",data:labels.map(m=>income[m]||0)},
-        {label:"รายจ่าย",data:labels.map(m=>expense[m]||0)}
+        {label:"รายรับ", data:labels.map(m=>income[m]||0), backgroundColor:"#22c55e"},
+        {label:"รายจ่าย", data:labels.map(m=>expense[m]||0), backgroundColor:"#ef4444"}
       ]
     }
   });
 }
 
-function drawProfit(labels,profit){
+function drawProfit(labels, income, expense){
   if(profitChart) profitChart.destroy();
 
-  profitChart=new Chart(profitCanvas,{
+  const profitData = labels.map(m=>(income[m]||0)-(expense[m]||0));
+
+  profitChart = new Chart(profitCanvas,{
     type:"line",
     data:{
       labels:labels,
       datasets:[{
-        label:"กำไร",
-        data:labels.map(m=>profit[m]||0)
+        label:"กำไร/ขาดทุน",
+        data:profitData,
+        borderColor:"#38bdf8"
       }]
     }
   });
