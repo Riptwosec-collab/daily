@@ -128,7 +128,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🔥 Firebase config ของคุณ
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+
+// 🔥 Firebase Config (ของคุณ)
 const firebaseConfig = {
   apiKey: "AIzaSyD7c3HAdLEt_7y1PPstlL8QNcnF1waANAQ",
   authDomain: "ai-2ca28.firebaseapp.com",
@@ -139,13 +146,115 @@ const firebaseConfig = {
   measurementId: "G-F8KFBF14G5"
 };
 
-// init
+// init Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// analytics (optional)
+let analytics;
+try {
+  analytics = getAnalytics(app);
+} catch(e){
+  console.log("Analytics skip");
+}
+
 let user;
 
+// 🔐 LOGIN
+window.login = async ()=>{
+  try{
+    await signInWithEmailAndPassword(auth, email.value, pass.value);
+  }catch(err){
+    loginError.innerText = err.message;
+  }
+};
+
+// 🆕 REGISTER
+window.register = async ()=>{
+  try{
+    await createUserWithEmailAndPassword(auth, email.value, pass.value);
+    loginError.innerText = "สมัครสำเร็จ";
+  }catch(err){
+    loginError.innerText = err.message;
+  }
+};
+
+// 🚪 LOGOUT
+window.logout = async ()=>{
+  await signOut(auth);
+};
+
+// 👤 AUTH STATE
+onAuthStateChanged(auth,(u)=>{
+  if(u){
+    user=u;
+    authBox.style.display="none";
+    appBox.style.display="block";
+    load();
+  }else{
+    authBox.style.display="block";
+    appBox.style.display="none";
+  }
+});
+
+// ➕ ADD DATA
+window.add = async ()=>{
+  await addDoc(collection(db,"expenses"),{
+    uid:user.uid,
+    name:name.value,
+    amount:parseFloat(amount.value),
+    type:type.value,
+    date:date.value,
+    category:category.value
+  });
+};
+
+// 🗑 DELETE
+window.del = async (id)=>{
+  await deleteDoc(doc(db,"expenses",id));
+};
+
+// 📊 LOAD DATA
+function load(){
+  const q = query(collection(db,"expenses"), where("uid","==",user.uid));
+
+  onSnapshot(q,(snap)=>{
+
+    let income=0,expense=0;
+    let summary={}, months={};
+
+    list.innerHTML="";
+
+    snap.forEach(d=>{
+      const e=d.data();
+      const m=e.date?.slice(0,7);
+
+      if(e.type==="income"){
+        income+=e.amount;
+        months[m]=(months[m]||0)+e.amount;
+      }else{
+        expense+=e.amount;
+        summary[e.category]=(summary[e.category]||0)+e.amount;
+        months[m]=(months[m]||0)-e.amount;
+      }
+
+      list.innerHTML+=`
+        <div class="item">
+          ${e.name} (${e.amount})
+          <button onclick="del('${d.id}')">ลบ</button>
+        </div>`;
+    });
+
+    incomeEl.innerText = income;
+    expenseEl.innerText = expense;
+    balance.innerText = income-expense;
+
+  });
+}
+
+</script>
+  
 // LOGIN
 window.login = async ()=>{
   try{
