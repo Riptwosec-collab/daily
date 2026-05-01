@@ -1,39 +1,273 @@
-<!-- แทนที่ส่วนแอปเดิมในไฟล์ของคุณ -->
-<div id="appBox" style="display:none">
-    
-    <!-- ส่วนแสดงชื่อผู้ใช้และปุ่ม Logout -->
-    <div class="card" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.15);">
-        <span id="userDisplay" style="font-size: 0.9rem; font-weight: bold; color: #60a5fa;">👤 กำลังโหลด...</span>
-        <button onclick="logout()" style="width: auto; margin: 0; padding: 5px 12px; background: #475569; font-size: 12px;">Logout</button>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Cloud PRO</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { margin: 0; font-family: system-ui; background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; min-height: 100vh; }
+        .container { max-width: 420px; margin: auto; padding: 12px; }
+        .card { background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border-radius: 18px; padding: 14px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat { background: rgba(255, 255, 255, 0.1); padding: 12px; border-radius: 14px; text-align: center; }
+        input, select, button { width: 100%; padding: 10px; margin: 6px 0; border-radius: 10px; border: none; box-sizing: border-box; }
+        button { background: #2563eb; color: #fff; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #1d4ed8; }
+        .item { background: white; color: black; padding: 10px; border-radius: 10px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- LOGIN -->
+    <div id="authBox" class="card">
+        <h3>🔐 เข้าสู่ระบบ</h3>
+        <input id="email" placeholder="Email">
+        <input id="pass" type="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <button onclick="register()" style="background: #475569;">Register</button>
+        <div id="loginError" style="color:#fb7185; font-size: 14px; margin-top: 5px;"></div>
     </div>
 
-    <!-- แผงสถิติ -->
-    <div class="dashboard">
-        <div class="stat">รายรับ<br><b id="incomeVal" style="color: #10b981;">0</b></div>
-        <div class="stat">รายจ่าย<br><b id="expenseVal" style="color: #fb7185;">0</b></div>
-        <div class="stat">คงเหลือ<br><b id="balanceVal">0</b></div>
-        <div class="stat">งบรายจ่าย<br><input id="budget" type="number" placeholder="ตั้งงบ" style="margin:0; padding:2px; text-align:center; background: rgba(0,0,0,0.2); color: white; height: 25px;"></div>
+    <!-- APP -->
+    <div id="appBox" style="display:none">
+        <!-- ส่วนหัวแสดงชื่อและปุ่มออก -->
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.15);">
+            <span id="userDisplay" style="font-size: 0.9rem; font-weight: bold; color: #60a5fa;">👤 กำลังโหลด...</span>
+            <button onclick="logout()" style="width: auto; margin: 0; padding: 5px 12px; background: #475569; font-size: 12px;">Logout</button>
+        </div>
+
+        <!-- แผงสถิติ -->
+        <div class="dashboard">
+            <div class="stat">รายรับ<br><b id="incomeVal" style="color: #10b981;">0</b></div>
+            <div class="stat">รายจ่าย<br><b id="expenseVal" style="color: #fb7185;">0</b></div>
+            <div class="stat">คงเหลือ<br><b id="balanceVal">0</b></div>
+            <div class="stat">งบรายจ่าย<br><input id="budget" type="number" placeholder="ตั้งงบ" style="margin:0; padding:2px; text-align:center; background: rgba(0,0,0,0.2); color: white; height: 25px;"></div>
+        </div>
+
+        <div id="alertBox" style="text-align: center; font-weight: bold; margin: 5px 0; font-size: 14px;"></div>
+
+        <!-- ฟอร์มเพิ่มรายการ -->
+        <div class="card">
+            <input id="name" placeholder="ชื่อรายการ (เช่น ค่าข้าว)">
+            <input id="amount" type="number" placeholder="จำนวนเงิน">
+            <select id="type">
+                <option value="income">รายรับ (+)</option>
+                <option value="expense" selected>รายจ่าย (-)</option>
+            </select>
+            <input id="date" type="date">
+            <input id="category" placeholder="หมวดหมู่ (เช่น อาหาร, เงินเดือน)">
+            <button onclick="add()">+ บันทึกรายการ</button>
+        </div>
+
+        <!-- รายการที่ถูกเพิ่ม -->
+        <h4 style="margin-left: 10px; margin-bottom: 5px;">📜 ประวัติรายการ</h4>
+        <div id="list" style="margin-bottom: 20px;"></div>
+
+        <!-- กราฟ -->
+        <div class="card"><canvas id="pieChart"></canvas></div>
+        <div class="card"><canvas id="profitChart"></canvas></div>
     </div>
-
-    <div id="alertBox" style="text-align: center; font-weight: bold; margin: 5px 0; font-size: 14px;"></div>
-
-    <!-- ฟอร์มเพิ่มรายการ -->
-    <div class="card">
-        <input id="name" placeholder="ชื่อรายการ (เช่น ค่าข้าว)">
-        <input id="amount" type="number" placeholder="จำนวนเงิน">
-        <select id="type">
-            <option value="income">รายรับ (+)</option>
-            <option value="expense" selected>รายจ่าย (-)</option>
-        </select>
-        <input id="date" type="date">
-        <input id="category" placeholder="หมวดหมู่ (เช่น อาหาร, เดินทาง)">
-        <button onclick="add()">+ บันทึกรายการ</button>
-    </div>
-
-    <!-- รายการที่ถูกเพิ่ม -->
-    <h4 style="margin-left: 10px; margin-bottom: 5px;">📜 ประวัติรายการ</h4>
-    <div id="list" style="margin-bottom: 20px;"></div>
-
-    <div class="card"><canvas id="pieChart"></canvas></div>
-    <div class="card"><canvas id="profitChart"></canvas></div>
 </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyD7c3HAdLEt_7y1PPstlL8QNcnF1waANAQ",
+    authDomain: "ai-2ca28.firebaseapp.com",
+    projectId: "ai-2ca28",
+    storageBucket: "ai-2ca28.firebasestorage.app",
+    messagingSenderId: "450467403966",
+    appId: "1:450467403966:web:8423069c53d86fe532e6ef"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let user;
+let pie, line;
+
+// 🔐 AUTH FUNCTIONS
+window.login = async () => {
+    try {
+        await signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('pass').value);
+    } catch (e) { document.getElementById('loginError').innerText = "Error: " + e.message; }
+};
+
+window.register = async () => {
+    try {
+        await createUserWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('pass').value);
+    } catch (e) { document.getElementById('loginError').innerText = "Error: " + e.message; }
+};
+
+window.logout = () => signOut(auth);
+
+// 👤 CHECK STATE & INIT
+onAuthStateChanged(auth, (u) => {
+    if (u) {
+        user = u;
+        document.getElementById('authBox').style.display = "none";
+        document.getElementById('appBox').style.display = "block";
+        
+        // แสดง Email ผู้ใช้
+        document.getElementById('userDisplay').innerText = `👤 ${user.email}`;
+        
+        // 🌟 เซ็ตวันที่เริ่มต้นเป็นวันปัจจุบัน (ใช้ toLocaleDateString แบบ YYYY-MM-DD เพื่อป้องกัน Timezone เพี้ยน)
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        document.getElementById('date').value = `${yyyy}-${mm}-${dd}`;
+        
+        load();
+    } else {
+        document.getElementById('authBox').style.display = "block";
+        document.getElementById('appBox').style.display = "none";
+    }
+});
+
+// ➕ ADD DATA (แก้ปัญหาชนกับ window.name)
+window.add = async () => {
+    const nameInput = document.getElementById('name');
+    const amountInput = document.getElementById('amount');
+    const typeInput = document.getElementById('type');
+    const dateInput = document.getElementById('date');
+    const categoryInput = document.getElementById('category');
+
+    if (!user || !amountInput.value) return;
+    try {
+        await addDoc(collection(db, "expenses"), {
+            uid: user.uid,
+            name: nameInput.value || "ไม่มีชื่อ",
+            amount: Number(amountInput.value),
+            type: typeInput.value,
+            date: dateInput.value, // ใช้วันที่ที่โชว์ในช่อง
+            category: categoryInput.value || "ทั่วไป",
+            createdAt: Date.now()
+        });
+        // เคลียร์เฉพาะชื่อกับจำนวนเงิน เก็บวันที่และหมวดหมู่ไว้เผื่อคีย์ต่อ
+        nameInput.value = ""; 
+        amountInput.value = "";
+    } catch (e) { console.error(e); }
+};
+
+// 🗑 DELETE DATA
+window.del = async (id) => {
+    if(confirm("ลบรายการนี้ใช่หรือไม่?")) {
+        await deleteDoc(doc(db, "expenses", id));
+    }
+};
+
+// 📊 LOAD & SYNC
+function load() {
+    const q = query(collection(db, "expenses"), where("uid", "==", user.uid));
+
+    onSnapshot(q, (snap) => {
+        let totalIncome = 0, totalExpense = 0;
+        let summary = {}, monthly = {};
+        const listDiv = document.getElementById('list');
+        listDiv.innerHTML = "";
+
+        // จัดเรียงข้อมูลตามวันที่ (ใหม่ -> เก่า) เฉพาะฝั่ง Client
+        const docs = [];
+        snap.forEach(d => docs.push({ id: d.id, ...d.data() }));
+        docs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        docs.forEach(e => {
+            const val = Number(e.amount);
+
+            // คำนวณยอด
+            if (e.type === "income") totalIncome += val;
+            else {
+                totalExpense += val;
+                summary[e.category] = (summary[e.category] || 0) + val;
+            }
+
+            // ข้อมูลรายเดือน
+            const m = e.date ? e.date.slice(0, 7) : "ไม่ระบุ";
+            monthly[m] = (monthly[m] || 0) + (e.type === "income" ? val : -val);
+
+            // UI แสดงรายการ
+            listDiv.innerHTML += `
+                <div class="item" style="border-left: 5px solid ${e.type === 'income' ? '#10b981' : '#ef4444'}; margin-bottom: 8px;">
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <b style="font-size: 15px;">${e.name}</b>
+                        <span style="font-size: 11px; color: #666;">🏷️ ${e.category} | 📅 ${e.date}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <b style="color: ${e.type === 'income' ? '#059669' : '#dc2626'}">
+                            ${e.type === 'income' ? '+' : '-'}${val.toLocaleString()}
+                        </b>
+                        <button onclick="del('${e.id}')" style="width: auto; padding: 4px 8px; background: #fee2e2; color: #dc2626; margin: 0; font-size: 11px; border-radius: 6px;">ลบ</button>
+                    </div>
+                </div>`;
+        });
+
+        document.getElementById('incomeVal').innerText = totalIncome.toLocaleString();
+        document.getElementById('expenseVal').innerText = totalExpense.toLocaleString();
+        document.getElementById('balanceVal').innerText = (totalIncome - totalExpense).toLocaleString();
+
+        const budgetInput = document.getElementById('budget');
+        const b = Number(budgetInput.value || 0);
+        document.getElementById('alertBox').innerText = (b > 0 && totalExpense > b) ? "⚠️ ระวัง! เกินงบที่ตั้งไว้" : "";
+
+        // ตรวจจับการเปลี่ยนค่างบประมาณ
+        budgetInput.oninput = () => {
+            const currentB = Number(budgetInput.value || 0);
+            document.getElementById('alertBox').innerText = (currentB > 0 && totalExpense > currentB) ? "⚠️ ระวัง! เกินงบที่ตั้งไว้" : "";
+        };
+
+        drawPie(summary);
+        drawLine(monthly);
+    });
+}
+
+function drawPie(data) {
+    if (pie) pie.destroy();
+    const ctx = document.getElementById('pieChart').getContext('2d');
+    pie = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels: Object.keys(data),
+            datasets: [{ 
+                data: Object.values(data),
+                backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4']
+            }]
+        },
+        options: { plugins: { title: { display: true, text: 'สัดส่วนรายจ่ายรายหมวด', color: '#fff' } } }
+    });
+}
+
+function drawLine(data) {
+    if (line) line.destroy();
+    const ctx = document.getElementById('profitChart').getContext('2d');
+    const sortedKeys = Object.keys(data).sort();
+    line = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: sortedKeys,
+            datasets: [{
+                label: "กำไร/ขาดทุนสะสม (รายเดือน)",
+                data: sortedKeys.map(k => data[k]),
+                borderColor: "#22c55e",
+                backgroundColor: "rgba(34, 197, 94, 0.2)",
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: { 
+            scales: { 
+                y: { ticks: { color: '#fff' } },
+                x: { ticks: { color: '#fff' } }
+            }
+        }
+    });
+}
+</script>
+</body>
+</html>
