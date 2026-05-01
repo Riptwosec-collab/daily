@@ -1,145 +1,185 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance Stable</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:#0f172a;
+  color:#fff;
+}
+.container{
+  max-width:500px;
+  margin:auto;
+  padding:15px;
+}
+.card{
+  background:#1e293b;
+  padding:12px;
+  border-radius:12px;
+  margin-bottom:10px;
+}
+input,select,button{
+  width:100%;
+  padding:10px;
+  margin:5px 0;
+}
+button{background:#2563eb;color:#fff}
+.item{
+  background:#fff;color:#000;padding:10px;border-radius:8px;margin-top:5px;
+  display:flex;justify-content:space-between;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Finance App</h2>
+
+<div class="card">
+<input id="name" placeholder="รายการ">
+<input id="amount" type="number" placeholder="จำนวนเงิน">
+<select id="type">
+<option value="income">รายรับ</option>
+<option value="expense">รายจ่าย</option>
+</select>
+<input id="date" type="date">
+<select id="category">
+<option>อาหาร</option>
+<option>เดินทาง</option>
+<option>เงินเดือน</option>
+<option>อื่นๆ</option>
+</select>
+<button onclick="add()">เพิ่ม</button>
+</div>
+
+<div class="card">💰 เหลือ: <span id="balance">0</span></div>
+
+<div class="card" id="list"></div>
+
+<div class="card"><canvas id="barChart"></canvas></div>
+<div class="card"><canvas id="profitChart"></canvas></div>
+
+</div>
+
 <script>
 let data = JSON.parse(localStorage.getItem("expenses")) || [];
 
-// ✅ bind DOM ชัดเจน
-const nameInput = document.getElementById("name");
-const amountInput = document.getElementById("amount");
-const typeInput = document.getElementById("type");
-const dateInput = document.getElementById("date");
-const categoryInput = document.getElementById("category");
-
-const list = document.getElementById("list");
-const balance = document.getElementById("balance");
-
-const monthFilter = document.getElementById("monthFilter");
-const catFilter = document.getElementById("catFilter");
+const nameEl = document.getElementById("name");
+const amountEl = document.getElementById("amount");
+const typeEl = document.getElementById("type");
+const dateEl = document.getElementById("date");
+const categoryEl = document.getElementById("category");
+const listEl = document.getElementById("list");
+const balanceEl = document.getElementById("balance");
 
 const barCanvas = document.getElementById("barChart");
-const pieCanvas = document.getElementById("pieChart");
 const profitCanvas = document.getElementById("profitChart");
 
-// charts
-let barChart, pieChart, profitChart;
+let barChart, profitChart;
 
 // auto date
-dateInput.value = new Date().toISOString().split("T")[0];
+dateEl.value = new Date().toISOString().split("T")[0];
 
 function save(){
   localStorage.setItem("expenses", JSON.stringify(data));
 }
 
 function add(){
-  const nameVal = nameInput.value.trim();
-  const amountVal = parseFloat(amountInput.value);
-  const dateVal = dateInput.value;
+  const name = nameEl.value.trim();
+  const amount = parseFloat(amountEl.value);
+  const date = dateEl.value;
 
-  if(!nameVal || isNaN(amountVal) || amountVal <= 0 || !dateVal){
+  if(!name || isNaN(amount) || !date){
     alert("กรอกข้อมูลให้ครบ");
     return;
   }
 
   data.push({
-    name: nameVal,
-    amount: amountVal,
-    type: typeInput.value,
-    date: dateVal,
-    category: categoryInput.value
+    name,
+    amount,
+    type:typeEl.value,
+    date,
+    category:categoryEl.value
   });
 
   save();
 
-  nameInput.value="";
-  amountInput.value="";
+  nameEl.value="";
+  amountEl.value="";
 
   render();
 }
 
 function render(){
-  list.innerHTML="";
-
-  const mFilter = monthFilter.value;
-  const cFilter = catFilter.value;
+  listEl.innerHTML="";
 
   let income=0, expense=0;
-  let summary={}, mIncome={}, mExpense={}, profitData={};
+  let mIncome={}, mExpense={}, profit={};
 
   data.forEach(e=>{
-    if(mFilter && !e.date.startsWith(mFilter)) return;
-    if(cFilter && e.category!==cFilter) return;
-
-    const m = e.date.slice(0,7);
+    const m=e.date.slice(0,7);
 
     if(e.type==="income"){
-      income += e.amount;
+      income+=e.amount;
       mIncome[m]=(mIncome[m]||0)+e.amount;
     } else {
-      expense += e.amount;
-      summary[e.category]=(summary[e.category]||0)+e.amount;
+      expense+=e.amount;
       mExpense[m]=(mExpense[m]||0)+e.amount;
     }
 
-    list.innerHTML += `
-      <div class="item">
-        <div>${e.name}<br><small>${e.date} • ${e.category}</small></div>
-        <div style="color:${e.type==='income'?'green':'red'}">
-          ${e.type==='income'?'+':'-'}${e.amount}
-        </div>
-      </div>`;
+    listEl.innerHTML+=`
+    <div class="item">
+      ${e.name}
+      <span>${e.type==="income"?"+":"-"}${e.amount}</span>
+    </div>`;
   });
 
   const months=[...new Set([...Object.keys(mIncome),...Object.keys(mExpense)])];
 
   months.forEach(m=>{
-    profitData[m]=(mIncome[m]||0)-(mExpense[m]||0);
+    profit[m]=(mIncome[m]||0)-(mExpense[m]||0);
   });
 
-  balance.innerText = income - expense;
+  balanceEl.innerText = income-expense;
 
-  drawBar(months,mIncome,mExpense,profitData);
-  drawPie(summary);
-  drawProfit(months,profitData);
+  drawBar(months,mIncome,mExpense);
+  drawProfit(months,profit);
 }
 
-// ✅ FIX Chart ถูกต้อง
-function drawBar(labels,incomeData,expenseData,profitData){
+function drawBar(labels,income,expense){
   if(barChart) barChart.destroy();
 
-  barChart = new Chart(barCanvas,{
+  barChart=new Chart(barCanvas,{
     type:"bar",
     data:{
       labels:labels,
       datasets:[
-        {label:"รายรับ", data:labels.map(m=>incomeData[m]||0), backgroundColor:"#22c55e"},
-        {label:"รายจ่าย", data:labels.map(m=>expenseData[m]||0), backgroundColor:"#ef4444"},
-        {label:"กำไร", data:labels.map(m=>profitData[m]||0)}
+        {label:"รายรับ",data:labels.map(m=>income[m]||0)},
+        {label:"รายจ่าย",data:labels.map(m=>expense[m]||0)}
       ]
     }
   });
 }
 
-function drawPie(summary){
-  if(pieChart) pieChart.destroy();
-
-  pieChart = new Chart(pieCanvas,{
-    type:"doughnut",
-    data:{
-      labels:Object.keys(summary),
-      datasets:[{data:Object.values(summary)}]
-    }
-  });
-}
-
-function drawProfit(labels,profitData){
+function drawProfit(labels,profit){
   if(profitChart) profitChart.destroy();
 
-  profitChart = new Chart(profitCanvas,{
+  profitChart=new Chart(profitCanvas,{
     type:"line",
     data:{
       labels:labels,
       datasets:[{
-        label:"กำไร/ขาดทุน",
-        data:labels.map(m=>profitData[m]||0),
-        borderColor:"#38bdf8"
+        label:"กำไร",
+        data:labels.map(m=>profit[m]||0)
       }]
     }
   });
@@ -147,3 +187,6 @@ function drawProfit(labels,profitData){
 
 render();
 </script>
+
+</body>
+</html>
